@@ -3,33 +3,93 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Get Me The Data</title>
+    <title>Get Me The Data — powered by ClawBio</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/static/styles.css">
+    <style>
+        .clawbio-banner {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            position: relative;
+            overflow: hidden;
+        }
+        .clawbio-banner::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background:
+                radial-gradient(ellipse 80% 50% at 20% 40%, rgba(16,185,129,0.08) 0%, transparent 70%),
+                radial-gradient(ellipse 60% 40% at 80% 60%, rgba(16,185,129,0.05) 0%, transparent 70%);
+            pointer-events: none;
+        }
+        .clawbio-banner .dino-glow {
+            filter: drop-shadow(0 0 8px rgba(16,185,129,0.3));
+            transition: filter 0.3s ease;
+        }
+        .clawbio-banner:hover .dino-glow {
+            filter: drop-shadow(0 0 14px rgba(16,185,129,0.5));
+        }
+        .clawbio-pill {
+            background: rgba(16,185,129,0.1);
+            border: 1px solid rgba(16,185,129,0.25);
+            transition: all 0.2s ease;
+        }
+        .clawbio-pill:hover {
+            background: rgba(16,185,129,0.18);
+            border-color: rgba(16,185,129,0.4);
+        }
+        .clawbio-footer {
+            background: #0f172a;
+            position: relative;
+        }
+        .clawbio-footer::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(16,185,129,0.4), transparent);
+        }
+        @keyframes subtle-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-2px); }
+        }
+        .dino-float {
+            animation: subtle-float 4s ease-in-out infinite;
+        }
+    </style>
 </head>
-<body class="bg-gray-50 min-h-screen">
+<body class="bg-gray-50 min-h-screen flex flex-col">
+
+    <!-- ClawBio Powered-by Banner -->
+    <div class="clawbio-banner px-4 py-2.5">
+        <div class="max-w-6xl mx-auto flex items-center justify-between relative z-10">
+            <a href="https://github.com/ClawBio/ClawBio" target="_blank" rel="noopener" class="flex items-center gap-2.5 group">
+                <!-- Velociraptor logo -->
+                <svg class="dino-glow dino-float" width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M44 8c2-1 5-1 7 1s2 5 0 7l-4 3c1 3 1 6-1 9l-3 4 2 3c1 2 1 5-1 7l-5 5-1 6c0 3-1 5-3 7l-4 3h-5l1-6-3-2-6 5c-2 1-4 1-6 0l-3-4 2-6-5-1-4 3c-2 1-4 0-5-2l-1-5 5-4c-2-3-2-7 0-10l4-5-1-5c-1-3 0-6 2-8l5-4 7-1 6 2 4-2 7-2z"
+                          stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                    <circle cx="45" cy="14" r="2" fill="#10b981"/>
+                </svg>
+                <span class="text-gray-400 text-xs tracking-wide">
+                    Powered by <strong class="text-emerald-400 font-semibold">ClawBio</strong>
+                </span>
+            </a>
+            <span class="clawbio-pill px-2.5 py-0.5 rounded-full text-[10px] text-emerald-400 tracking-widest uppercase font-medium">
+                AI Agent Skill Library
+            </span>
+        </div>
+    </div>
 
     <!-- Header -->
     <header class="bg-white border-b border-gray-200">
-        <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
-            <div>
-                <h1 class="text-2xl font-bold text-gray-900">Get Me The Data</h1>
-                <p class="text-sm text-gray-500 mt-1">Drop a screenshot, draw boxes around plots, extract numerical data</p>
-            </div>
-            <div class="flex items-center gap-2 text-sm text-gray-400">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z" fill="#10b981" opacity="0.15"/>
-                    <path d="M8 8c0-1 .5-2 1.5-2.5M16 8c0-1-.5-2-1.5-2.5M9 16c.5.5 1.5 1 3 1s2.5-.5 3-1" stroke="#10b981" stroke-width="1.5" stroke-linecap="round"/>
-                    <circle cx="9" cy="10" r="1.5" fill="#10b981"/>
-                    <circle cx="15" cy="10" r="1.5" fill="#10b981"/>
-                    <path d="M7 13.5Q12 17 17 13.5" stroke="#10b981" stroke-width="1" stroke-linecap="round" fill="none" opacity="0.5"/>
-                </svg>
-                <span>Made with <strong class="text-emerald-600">ClawBio</strong></span>
-            </div>
+        <div class="max-w-6xl mx-auto px-4 py-4">
+            <h1 class="text-2xl font-bold text-gray-900">Get Me The Data</h1>
+            <p class="text-sm text-gray-500 mt-1">Drop a screenshot, draw boxes around plots, extract numerical data</p>
         </div>
     </header>
 
-    <main class="max-w-6xl mx-auto px-4 py-8 space-y-8">
+    <main class="max-w-6xl mx-auto px-4 py-8 space-y-8 flex-1">
 
         <!-- Drop Zone (shown when no image loaded) -->
         <section id="drop-section" class="bg-white rounded-lg shadow p-6">
@@ -85,6 +145,45 @@
         </section>
 
     </main>
+
+    <!-- ClawBio Footer -->
+    <footer class="clawbio-footer px-4 py-8 mt-8">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex flex-col md:flex-row items-center justify-between gap-6">
+                <!-- Left: logo + tagline -->
+                <a href="https://github.com/ClawBio/ClawBio" target="_blank" rel="noopener" class="flex items-center gap-4 group">
+                    <svg class="dino-glow" width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M44 8c2-1 5-1 7 1s2 5 0 7l-4 3c1 3 1 6-1 9l-3 4 2 3c1 2 1 5-1 7l-5 5-1 6c0 3-1 5-3 7l-4 3h-5l1-6-3-2-6 5c-2 1-4 1-6 0l-3-4 2-6-5-1-4 3c-2 1-4 0-5-2l-1-5 5-4c-2-3-2-7 0-10l4-5-1-5c-1-3 0-6 2-8l5-4 7-1 6 2 4-2 7-2z"
+                              stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+                        <circle cx="45" cy="14" r="2" fill="#10b981"/>
+                    </svg>
+                    <div>
+                        <div class="text-white font-bold text-lg tracking-tight group-hover:text-emerald-400 transition-colors">ClawBio</div>
+                        <div class="text-gray-500 text-xs mt-0.5">The first bioinformatics-native AI agent skill library</div>
+                    </div>
+                </a>
+
+                <!-- Right: feature pills -->
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="clawbio-pill px-3 py-1 rounded-full text-[11px] text-emerald-400 tracking-wide">Local-first</span>
+                    <span class="clawbio-pill px-3 py-1 rounded-full text-[11px] text-emerald-400 tracking-wide">Privacy-focused</span>
+                    <span class="clawbio-pill px-3 py-1 rounded-full text-[11px] text-emerald-400 tracking-wide">Reproducible</span>
+                    <span class="clawbio-pill px-3 py-1 rounded-full text-[11px] text-emerald-400 tracking-wide">15+ Skills</span>
+                </div>
+            </div>
+
+            <!-- Divider -->
+            <div class="border-t border-gray-800 mt-6 pt-4 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <p class="text-gray-600 text-xs">
+                    Data extraction powered by Claude vision + OpenCV calibration
+                </p>
+                <a href="https://github.com/ClawBio/ClawBio" target="_blank" rel="noopener"
+                   class="text-xs text-emerald-500 hover:text-emerald-400 transition-colors font-medium">
+                    github.com/ClawBio/ClawBio
+                </a>
+            </div>
+        </div>
+    </footer>
 
     <script src="/static/app.js"></script>
 </body>

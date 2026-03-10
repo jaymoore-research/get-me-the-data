@@ -5,5 +5,3 @@ anthropic>=0.40.0
 python-dotenv>=1.0.0
 python-multipart>=0.0.6
 Pillow>=10.0.0
-opencv-python-headless>=4.8.0
-numpy>=1.24.0

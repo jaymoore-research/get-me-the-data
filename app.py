@@ -1,6 +1,8 @@
 """Get Me The Data — FastAPI application (screenshot-only mode).
 
 Core extraction engine powered by ClawBio data-extractor skill.
+All models, digitizer, and CV calibration logic live in
+ClawBio/skills/data-extractor/core/.
 """
 
 from __future__ import annotations
@@ -21,32 +23,33 @@ from pydantic import BaseModel
 
 load_dotenv()
 
-# Use ClawBio data-extractor skill as the extraction backend
-_CLAWBIO_SKILL = Path(__file__).resolve().parent.parent / "ClawBio" / "skills" / "data-extractor"
-if _CLAWBIO_SKILL.exists() and str(_CLAWBIO_SKILL) not in sys.path:
+# ── ClawBio backend ──────────────────────────────────────────────────
+_BASE_DIR = Path(__file__).resolve().parent
+_STATIC_DIR = _BASE_DIR / "static"
+_CLAWBIO_SKILL = _BASE_DIR.parent / "ClawBio" / "skills" / "data-extractor"
+
+if not _CLAWBIO_SKILL.exists():
+    raise RuntimeError(
+        f"ClawBio data-extractor skill not found at {_CLAWBIO_SKILL}. "
+        "Clone ClawBio alongside this repo: "
+        "git clone <ClawBio-url> ../ClawBio"
+    )
+
+if str(_CLAWBIO_SKILL) not in sys.path:
     sys.path.insert(0, str(_CLAWBIO_SKILL))
 
-# Import from ClawBio skill (falls back to local core/ if ClawBio not found)
-try:
-    from core.models import Confidence, ExtractedData, Figure, PlotType
-    from core.digitizer import digitize_figure
-except ImportError:
-    from core.models import Confidence, ExtractedData, Figure, PlotType
-    from core.plot_digitizer import digitize_figure
+from core.models import Confidence, ExtractedData, Figure, PlotType  # noqa: E402
+from core.digitizer import digitize_figure  # noqa: E402
 
 logger = logging.getLogger(__name__)
 
-# Resolve paths relative to this file (works on Vercel and locally)
-_BASE_DIR = Path(__file__).resolve().parent
-_STATIC_DIR = _BASE_DIR / "static"
+# ── In-memory stores ─────────────────────────────────────────────────
+images_store: dict[str, bytes] = {}  # image_id -> PNG bytes
+images_meta: dict[str, dict] = {}  # image_id -> {width, height}
+figures_store: dict[str, list[Figure]] = {}  # image_id -> figures
+extracted_store: dict[str, list[ExtractedData]] = {}  # image_id -> results
 
-# In-memory stores
-images_store: dict[str, bytes] = {}  # image_id → PNG bytes
-images_meta: dict[str, dict] = {}  # image_id → {width, height}
-figures_store: dict[str, list[Figure]] = {}  # image_id → figures (for panel serving)
-extracted_store: dict[str, list[ExtractedData]] = {}  # image_id → results
-
-app = FastAPI(title="Get Me The Data", version="0.2.0")
+app = FastAPI(title="Get Me The Data", version="0.3.0")
 
 # Serve static files
 app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
@@ -57,7 +60,7 @@ async def index():
     return FileResponse(str(_STATIC_DIR / "index.html"))
 
 
-# ─── Image Upload & Serving ───
+# ─── Image Upload & Serving ──────────────────────────────────────────
 
 
 @app.post("/api/upload-image")
@@ -69,7 +72,6 @@ async def upload_image(file: UploadFile):
     content = await file.read()
     image_id = hashlib.sha256(content).hexdigest()[:12]
 
-    # Convert to PNG and store
     img = PILImage.open(io.BytesIO(content))
     if img.mode == "RGBA":
         bg = PILImage.new("RGB", img.size, (255, 255, 255))
@@ -80,9 +82,7 @@ async def upload_image(file: UploadFile):
 
     buf = io.BytesIO()
     img.save(buf, format="PNG", optimize=True)
-    png_bytes = buf.getvalue()
-
-    images_store[image_id] = png_bytes
+    images_store[image_id] = buf.getvalue()
     images_meta[image_id] = {"width": img.width, "height": img.height}
 
     return {"image_id": image_id, "width": img.width, "height": img.height}
@@ -100,13 +100,14 @@ async def get_image(image_id: str):
     )
 
 
-# ─── Plot Detection ───
+# ─── Plot Detection ──────────────────────────────────────────────────
 
 
 @app.get("/api/detect-plots/{image_id}")
 async def detect_plots(image_id: str):
     """Use Claude vision to detect plot regions on an uploaded image."""
     import anthropic
+    import json
 
     if image_id not in images_store:
         raise HTTPException(status_code=404, detail="Image not found")
@@ -154,7 +155,6 @@ async def detect_plots(image_id: str):
         }],
     )
 
-    import json
     raw = response.content[0].text.strip()
     if raw.startswith("```"):
         raw = raw.split("\n", 1)[1]
@@ -163,13 +163,12 @@ async def detect_plots(image_id: str):
     raw = raw.strip()
 
     try:
-        data = json.loads(raw)
-        return data
+        return json.loads(raw)
     except json.JSONDecodeError:
         return {"plots": []}
 
 
-# ─── Extraction ───
+# ─── Extraction ───────────────────────────────────────────────────────
 
 
 class ImageRegionRequest(BaseModel):
@@ -182,16 +181,12 @@ class ImageRegionRequest(BaseModel):
 
 @app.post("/api/extract-image-region")
 async def extract_image_region(req: ImageRegionRequest):
-    """Extract data from a region of an uploaded image.
-
-    Runs the full 3-phase pipeline: panel detection → pre-analysis → extraction.
-    """
+    """Extract data from a region of an uploaded image."""
     if req.image_id not in images_store:
         raise HTTPException(status_code=404, detail="Image not found")
 
     img = PILImage.open(io.BytesIO(images_store[req.image_id]))
 
-    # Crop if region specified
     if req.crop_x_pct is not None:
         x = int(req.crop_x_pct / 100 * img.width)
         y = int(req.crop_y_pct / 100 * img.height)
@@ -199,7 +194,6 @@ async def extract_image_region(req: ImageRegionRequest):
         h = int(req.crop_h_pct / 100 * img.height)
         img = img.crop((x, y, x + w, y + h))
 
-    # Resize if too large
     if img.width > 1500 or img.height > 1500:
         img.thumbnail((1500, 1500), PILImage.LANCZOS)
 
@@ -208,7 +202,6 @@ async def extract_image_region(req: ImageRegionRequest):
     b64 = b64mod.b64encode(buf.getvalue()).decode()
 
     figure_id = req.image_id + "_region"
-
     fig = Figure(
         figure_id=figure_id,
         paper_id=req.image_id,
@@ -221,7 +214,6 @@ async def extract_image_region(req: ImageRegionRequest):
         plot_type_confidence=Confidence.MEDIUM,
     )
 
-    # Store so image endpoint can serve panels
     if req.image_id not in figures_store:
         figures_store[req.image_id] = []
     figures_store[req.image_id].append(fig)
@@ -238,7 +230,7 @@ async def extract_image_region(req: ImageRegionRequest):
         raise HTTPException(status_code=500, detail=f"Extraction failed: {str(e)}")
 
 
-# ─── Figure image serving (for panel crops) ───
+# ─── Figure image serving (for panel crops) ──────────────────────────
 
 
 @app.get("/api/figure-image/{figure_id}")
@@ -256,7 +248,7 @@ async def get_figure_image(figure_id: str):
     raise HTTPException(status_code=404, detail="Figure not found")
 
 
-# ─── Edit extracted data ───
+# ─── Edit extracted data ─────────────────────────────────────────────
 
 
 class EditCellRequest(BaseModel):
@@ -288,7 +280,6 @@ async def edit_cell(req: EditCellRequest):
     if req.point_index >= len(arr):
         raise HTTPException(status_code=404, detail="Point index out of range")
 
-    # Apply the edit
     if req.field == "y_values":
         arr[req.point_index] = float(req.value)
     elif req.field in ("error_bars_lower", "error_bars_upper"):

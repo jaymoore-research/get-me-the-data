@@ -1,4 +1,7 @@
-"""Get Me The Data — FastAPI application (screenshot-only mode)."""
+"""Get Me The Data — FastAPI application (screenshot-only mode).
+
+Core extraction engine powered by ClawBio data-extractor skill.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +9,7 @@ import base64 as b64mod
 import hashlib
 import io
 import logging
+import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -17,15 +21,24 @@ from pydantic import BaseModel
 
 load_dotenv()
 
-from core.models import (
-    Confidence,
-    ExtractedData,
-    Figure,
-    PlotType,
-)
-from core.plot_digitizer import digitize_figure
+# Use ClawBio data-extractor skill as the extraction backend
+_CLAWBIO_SKILL = Path(__file__).resolve().parent.parent / "ClawBio" / "skills" / "data-extractor"
+if _CLAWBIO_SKILL.exists() and str(_CLAWBIO_SKILL) not in sys.path:
+    sys.path.insert(0, str(_CLAWBIO_SKILL))
+
+# Import from ClawBio skill (falls back to local core/ if ClawBio not found)
+try:
+    from core.models import Confidence, ExtractedData, Figure, PlotType
+    from core.digitizer import digitize_figure
+except ImportError:
+    from core.models import Confidence, ExtractedData, Figure, PlotType
+    from core.plot_digitizer import digitize_figure
 
 logger = logging.getLogger(__name__)
+
+# Resolve paths relative to this file (works on Vercel and locally)
+_BASE_DIR = Path(__file__).resolve().parent
+_STATIC_DIR = _BASE_DIR / "static"
 
 # In-memory stores
 images_store: dict[str, bytes] = {}  # image_id → PNG bytes
@@ -36,12 +49,12 @@ extracted_store: dict[str, list[ExtractedData]] = {}  # image_id → results
 app = FastAPI(title="Get Me The Data", version="0.2.0")
 
 # Serve static files
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(_STATIC_DIR)), name="static")
 
 
 @app.get("/")
 async def index():
-    return FileResponse("static/index.html")
+    return FileResponse(str(_STATIC_DIR / "index.html"))
 
 
 # ─── Image Upload & Serving ───

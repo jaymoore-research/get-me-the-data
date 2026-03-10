@@ -50,6 +50,10 @@ STEP 3 — READ VALUES PRECISELY:
 200 and 300, the value is 250 (not "approximately 200" or "around 300").
 - For bars: find the top of each bar, project horizontally to the y-axis, \
 and read the value relative to the closest tick marks above and below.
+- If COMPUTER VISION CALIBRATION DATA is provided below, USE IT:
+  The calibration gives pixel coordinates of detected markers/bars.
+  Map each pixel position to an axis value by interpolating between ticks.
+  This is MORE ACCURATE than visual estimation — trust the pixel coordinates.
 - For line plots: read the y-value at each x-axis tick mark by projecting \
 vertically up to the curve, then horizontally to the y-axis.
 - For scatter points: read both x and y by projecting to the nearest ticks.
@@ -68,6 +72,8 @@ ERROR BARS — THIS IS CRITICAL, READ CAREFULLY:
   error_bars_lower = 5.2 − 4.1 = 1.1
   error_bars_upper = 6.8 − 5.2 = 1.6
 - For SYMMETRIC error bars (same distance above and below), both values are equal.
+- For ASYMMETRIC error bars (e.g., confidence intervals), read EACH end
+  INDEPENDENTLY from the axis — do NOT assume they are equal.
 - NEVER report the absolute axis position of the error bar tip as the error value.
 - If NO error bars are visible ANYWHERE in the figure, OMIT the \
 "error_bars_lower" and "error_bars_upper" keys entirely from the series. \
@@ -241,11 +247,18 @@ OUTLIERS/FLIERS: If individual outlier points are shown beyond the whiskers,
 
     PlotType.FOREST: """Forest plot guidance:
 - Each row is a study/subgroup. Use study names as x_values (strings).
-- y_values = effect size (OR, HR, RR, SMD, or MD — note which in notes).
-- error_bars_lower = lower CI bound (the left end of the horizontal line).
-- error_bars_upper = upper CI bound (the right end of the horizontal line).
+- y_values = effect size (OR, HR, RR, SMD, ROM, or MD — note which in notes).
+- ASYMMETRIC CI BOUNDS — read both ends of EACH horizontal line:
+  Step 1: Read the position of the point/square/diamond on the x-axis (= estimate).
+  Step 2: Read where the LEFT end of the CI line falls on the x-axis (= lower bound).
+  Step 3: Read where the RIGHT end of the CI line falls on the x-axis (= upper bound).
+  Step 4: error_bars_lower = estimate − lower_bound (always positive)
+  Step 5: error_bars_upper = upper_bound − estimate (always positive)
+  Example: estimate at 0.5, CI line goes from 0.2 to 0.85 →
+    error_bars_lower = 0.5 − 0.2 = 0.3
+    error_bars_upper = 0.85 − 0.5 = 0.35
 - Include the overall/pooled estimate as the LAST entry (usually a diamond shape).
-  For diamonds: y_value = center, error_bars = diamond left/right edges.
+  For diamonds: y_value = center, error_bars = diamond left/right edges as deltas.
 - SUBGROUP ANALYSES: If the forest plot has subgroup headings with their own
   subtotals, create separate series per subgroup. Name each series by the
   subgroup heading. Include subtotal rows within each series.
@@ -255,7 +268,9 @@ OUTLIERS/FLIERS: If individual outlier points are shown beyond the whiskers,
 - WEIGHT: If study weights (%) are shown, note them in notes.
 - The x-axis label tells you the effect measure — report it in notes.
 - If the scale is logarithmic (common for OR/HR/RR), read ACTUAL values
-  from the axis (e.g., 0.5, 1, 2), not distances.""",
+  from the axis (e.g., 0.5, 1, 2), not distances.
+- Reference line: note the position of the dashed vertical line (usually at
+  1.0 for ratios or 0 for differences).""",
 
     PlotType.KAPLAN_MEIER: """Kaplan-Meier survival curve guidance:
 - The curve is a STEP FUNCTION — it drops vertically at event times and stays
@@ -497,21 +512,32 @@ OUTLIERS/FLIERS: If individual outlier points are shown beyond the whiskers,
 - Note the correlation method (Pearson, Spearman) if stated.""",
 
     PlotType.ERROR_BAR: """Error bar plot (means with error bars only) guidance:
-- This shows group means as points/markers connected or not, with error bars,
+- This shows group means as points/markers with error bars (confidence intervals),
   but WITHOUT bars underneath (unlike a bar chart).
 - x_values = group/category labels or time points.
-- y_values = mean values (the center point/marker).
-- error_bars_lower = lower extent of error bar (mean - error).
-- error_bars_upper = upper extent of error bar (mean + error).
+- y_values = mean/estimate values (the center point/marker).
+- ASYMMETRIC ERROR BARS — read BOTH ends of each error bar INDEPENDENTLY:
+  Step 1: Read the y-position of the point/marker (= mean).
+  Step 2: Read where the BOTTOM of the error bar ends on the y-axis.
+  Step 3: Read where the TOP of the error bar ends on the y-axis.
+  Step 4: error_bars_lower = mean − bottom_end  (always positive)
+  Step 5: error_bars_upper = top_end − mean  (always positive)
+  These are often NOT equal! CIs from meta-analyses, ratios, and log-scale
+  data are frequently asymmetric.
+  Example: point at 0.5, CI bottom at 0.2, CI top at 0.85 →
+    error_bars_lower = 0.5 − 0.2 = 0.3
+    error_bars_upper = 0.85 − 0.5 = 0.35
 - IMPORTANT: Read whether the error bars represent SD, SEM, 95% CI, or
   range — this is usually stated in the legend or y-axis label. Note it.
 - If multiple groups are shown (different colors/markers), create one
   series per group.
+- If this is a meta-analysis summary (ratio of means, odds ratio, etc.),
+  note the dashed reference line value (often at 1.0 or 0) in notes.
 - If lines connect the points (making it look like a line plot), it may
   overlap with the line plot type — treat as error_bar if the emphasis
   is on discrete group comparisons rather than continuous trends.
 - If individual data points are overlaid, extract those as a separate series.
-- Significance annotations → note in notes.""",
+- Significance annotations (p-values, brackets) → note in notes.""",
 
     PlotType.TABLE: """Table guidance:
 - TITLE: The "title" field must be a DESCRIPTIVE title derived from the figure
@@ -1128,6 +1154,21 @@ async def _digitize_single(
 
     prompt = _get_prompt(figure, panel_label=panel_label, pre_analysis=pre_analysis_result)
 
+    # Phase 2b: CV calibration — detect markers/bars at pixel level
+    cv_context = ""
+    try:
+        from .cv_calibration import calibrate_image, format_calibration_prompt
+        img_bytes = base64.b64decode(figure.image_base64)
+        cal = calibrate_image(img_bytes)
+        cv_context = format_calibration_prompt(cal)
+        if cv_context:
+            logger.info(
+                f"CV calibration for {figure.figure_id}: "
+                f"{len(cal.markers)} markers, {len(cal.bars)} bars"
+            )
+    except Exception as e:
+        logger.warning(f"CV calibration failed for {figure.figure_id}: {e}")
+
     content: list[dict] = []
 
     # For multi-panel: send full figure first as context, then the cropped panel
@@ -1156,7 +1197,10 @@ async def _digitize_single(
             "data": figure.image_base64,
         },
     })
-    content.append({"type": "text", "text": prompt + "\n\nYou MUST call the report_extracted_data tool with your results."})
+    full_prompt = prompt
+    if cv_context:
+        full_prompt += "\n\n" + cv_context
+    content.append({"type": "text", "text": full_prompt + "\n\nYou MUST call the report_extracted_data tool with your results."})
 
     response = await client.messages.create(
         model="claude-opus-4-6",

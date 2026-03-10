@@ -92,12 +92,22 @@ function clearImage() {
 
 // ── Drag-and-drop + paste ──
 
+// Prevent browser default file-open on ALL drag/drop events globally.
+// Without this, dropping a file anywhere opens it in a new tab.
+window.addEventListener("dragover", function(e) { e.preventDefault(); }, false);
+window.addEventListener("drop", function(e) { e.preventDefault(); }, false);
+
 document.addEventListener("DOMContentLoaded", function() {
     var zone = document.getElementById("drop-zone");
-    zone.addEventListener("dragover", function(e) { e.preventDefault(); zone.classList.add("dragover"); });
+    zone.addEventListener("dragover", function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        zone.classList.add("dragover");
+    });
     zone.addEventListener("dragleave", function() { zone.classList.remove("dragover"); });
     zone.addEventListener("drop", function(e) {
         e.preventDefault();
+        e.stopPropagation();
         zone.classList.remove("dragover");
         var file = e.dataTransfer.files[0];
         if (file && file.type.startsWith("image/")) {
@@ -105,11 +115,10 @@ document.addEventListener("DOMContentLoaded", function() {
         }
     });
 
-    // Also allow dropping on the whole page when viewer is shown
-    document.body.addEventListener("dragover", function(e) { e.preventDefault(); });
-    document.body.addEventListener("drop", function(e) {
+    // Also allow dropping on the whole page (handles drops outside the zone)
+    document.addEventListener("drop", function(e) {
         e.preventDefault();
-        var file = e.dataTransfer.files[0];
+        var file = e.dataTransfer && e.dataTransfer.files[0];
         if (file && file.type.startsWith("image/")) {
             uploadImage(file);
         }

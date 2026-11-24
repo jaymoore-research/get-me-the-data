@@ -1,8 +1,6 @@
 """Get Me The Data — FastAPI application (screenshot-only mode).
 
-Core extraction engine powered by ClawBio data-extractor skill.
-All models, digitizer, and CV calibration logic live in
-ClawBio/skills/data-extractor/core/.
+Core extraction engine bundled from ClawBio data-extractor skill.
 """
 
 from __future__ import annotations
@@ -11,7 +9,6 @@ import base64 as b64mod
 import hashlib
 import io
 import logging
-import sys
 from pathlib import Path
 
 from dotenv import load_dotenv
@@ -21,25 +18,13 @@ from fastapi.staticfiles import StaticFiles
 from PIL import Image as PILImage
 from pydantic import BaseModel
 
+from core.models import Confidence, ExtractedData, Figure, PlotType
+from core.digitizer import digitize_figure
+
 load_dotenv()
 
-# ── ClawBio backend ──────────────────────────────────────────────────
 _BASE_DIR = Path(__file__).resolve().parent
 _STATIC_DIR = _BASE_DIR / "static"
-_CLAWBIO_SKILL = _BASE_DIR.parent / "ClawBio" / "skills" / "data-extractor"
-
-if not _CLAWBIO_SKILL.exists():
-    raise RuntimeError(
-        f"ClawBio data-extractor skill not found at {_CLAWBIO_SKILL}. "
-        "Clone ClawBio alongside this repo: "
-        "git clone <ClawBio-url> ../ClawBio"
-    )
-
-if str(_CLAWBIO_SKILL) not in sys.path:
-    sys.path.insert(0, str(_CLAWBIO_SKILL))
-
-from core.models import Confidence, ExtractedData, Figure, PlotType  # noqa: E402
-from core.digitizer import digitize_figure  # noqa: E402
 
 logger = logging.getLogger(__name__)
 

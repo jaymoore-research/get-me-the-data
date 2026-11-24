@@ -65,12 +65,8 @@
     <div class="clawbio-banner px-4 py-2.5">
         <div class="max-w-6xl mx-auto flex items-center justify-between relative z-10">
             <a href="https://github.com/ClawBio/ClawBio" target="_blank" rel="noopener" class="flex items-center gap-2.5 group">
-                <!-- Velociraptor logo -->
-                <svg class="dino-glow dino-float" width="28" height="28" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M44 8c2-1 5-1 7 1s2 5 0 7l-4 3c1 3 1 6-1 9l-3 4 2 3c1 2 1 5-1 7l-5 5-1 6c0 3-1 5-3 7l-4 3h-5l1-6-3-2-6 5c-2 1-4 1-6 0l-3-4 2-6-5-1-4 3c-2 1-4 0-5-2l-1-5 5-4c-2-3-2-7 0-10l4-5-1-5c-1-3 0-6 2-8l5-4 7-1 6 2 4-2 7-2z"
-                          stroke="#10b981" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                    <circle cx="45" cy="14" r="2" fill="#10b981"/>
-                </svg>
+                <!-- ClawBio logo -->
+                <img src="/static/clawbio-dino.png" alt="ClawBio" class="dino-glow dino-float h-7" style="filter: brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(120deg);" />
                 <span class="text-gray-400 text-xs tracking-wide">
                     Powered by <strong class="text-emerald-400 font-semibold">ClawBio</strong>
                 </span>
@@ -104,8 +100,8 @@
             </div>
             <input id="image-upload" type="file" accept="image/*" class="hidden" onchange="handleImageUpload(event)">
             <div class="mt-3 text-center">
-                <button onclick="loadExample('dopaminergic_phenotype')" class="text-sm text-gray-400 hover:text-blue-600 underline">
-                    Try example (dopaminergic cell phenotype)
+                <button onclick="loadExample('simple_bar_chart')" class="text-sm text-gray-400 hover:text-blue-600 underline">
+                    Try example (bar chart with error bars)
                 </button>
             </div>
         </section>
@@ -152,11 +148,7 @@
             <div class="flex flex-col md:flex-row items-center justify-between gap-6">
                 <!-- Left: logo + tagline -->
                 <a href="https://github.com/ClawBio/ClawBio" target="_blank" rel="noopener" class="flex items-center gap-4 group">
-                    <svg class="dino-glow" width="44" height="44" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M44 8c2-1 5-1 7 1s2 5 0 7l-4 3c1 3 1 6-1 9l-3 4 2 3c1 2 1 5-1 7l-5 5-1 6c0 3-1 5-3 7l-4 3h-5l1-6-3-2-6 5c-2 1-4 1-6 0l-3-4 2-6-5-1-4 3c-2 1-4 0-5-2l-1-5 5-4c-2-3-2-7 0-10l4-5-1-5c-1-3 0-6 2-8l5-4 7-1 6 2 4-2 7-2z"
-                              stroke="#10b981" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
-                        <circle cx="45" cy="14" r="2" fill="#10b981"/>
-                    </svg>
+                    <img src="/static/clawbio-dino.png" alt="ClawBio" class="dino-glow h-11" style="filter: brightness(0) invert(1) sepia(1) saturate(5) hue-rotate(120deg);" />
                     <div>
                         <div class="text-white font-bold text-lg tracking-tight group-hover:text-emerald-400 transition-colors">ClawBio</div>
                         <div class="text-gray-500 text-xs mt-0.5">The first bioinformatics-native AI agent skill library</div>
